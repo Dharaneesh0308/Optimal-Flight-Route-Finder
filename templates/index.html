@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Optimal Flight Route Finder</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <!-- Leaflet.js (Open-source Maps) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+        select, button {
+            margin: 10px;
+            padding: 8px;
+        }
+        #map {
+            width: 80%;
+            height: 500px;
+            margin: auto;
+            border: 2px solid black;
+        }
+    </style>
+</head>
+<body>
+    <h2>Find the Optimal Flight Route</h2>
+    
+    <label>Source Airport:</label>
+    <select id="source">
+        <option value="JFK">JFK - New York</option>
+        <option value="LAX">LAX - Los Angeles</option>
+        <option value="ORD">ORD - Chicago</option>
+        <option value="SFO">SFO - San Francisco</option>
+        <option value="DFW">DFW - Dallas</option>
+        <option value="MIA">MIA - Miami</option>
+    </select>
+    
+    <label>Destination Airport:</label>
+    <select id="destination">
+        <option value="JFK">JFK - New York</option>
+        <option value="LAX">LAX - Los Angeles</option>
+        <option value="ORD">ORD - Chicago</option>
+        <option value="SFO">SFO - San Francisco</option>
+        <option value="DFW">DFW - Dallas</option>
+        <option value="MIA">MIA - Miami</option>
+    </select>
+
+    <button onclick="findRoute()">Find Route</button>
+    
+    <h3>Result:</h3>
+    <p id="output"></p>
+
+    <div id="map"></div>
+
+    <script>
+        let map = L.map('map').setView([39.8283, -98.5795], 4); // Center on USA
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        let flightPath;
+
+        function findRoute() {
+            let source = $("#source").val();
+            let destination = $("#destination").val();
+            
+            $.ajax({
+                url: "/find_route",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify({ source: source, destination: destination }),
+                success: function(response) {
+                    $("#output").html(`Optimal Path: ${response.path.join(" → ")} <br> Travel Time: ${response.travel_time} minutes`);
+                    plotRouteOnMap(response.path);
+                },
+                error: function(xhr) {
+                    $("#output").html(xhr.responseJSON.error);
+                }
+            });
+        }
+
+        function plotRouteOnMap(airports) {
+            let airportCoords = {
+                "JFK": [40.6413, -73.7781],
+                "LAX": [33.9416, -118.4085],
+                "ORD": [41.9742, -87.9073],
+                "SFO": [37.6213, -122.3790],
+                "DFW": [32.8998, -97.0403],
+                "MIA": [25.7959, -80.2871]
+            };
+
+            let coordinates = airports.map(code => airportCoords[code]);
+
+            if (flightPath) {
+                map.removeLayer(flightPath); // Remove existing path
+            }
+
+            flightPath = L.polyline(coordinates, { color: 'red', weight: 4 }).addTo(map);
+            map.fitBounds(flightPath.getBounds()); // Adjust map view to fit route
+        }
+    </script>
+</body>
+</html>
